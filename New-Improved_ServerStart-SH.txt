@@ -1,0 +1,42 @@
+#!/bin/bash
+
+These are servers
+    server name, path to start script ("Vanilla Server", "~/servers/Vanilla_Server/")
+    etc.
+    etc.
+
+Starters=("startServer.sh", "StartServer.sh", "ServerStart.sh", "launch.sh", "ServerStartLinux.sh")
+
+Run the screen -list command, to get a list of all of the currently runnin screens
+Store output in a variable
+
+if the output contains the string "No Sockets found in *"
+assume no servers are running
+
+else search the output for text matching any of the server name strings
+
+
+0.2.0
+
+
+
+Servers should be listed 1 through X (where x is the number of
+servers) user selections should be made by inputting one by one
+the number of the server(s) they would like to start. Once the
+user has finished selecting all the servers they would like to
+start, pass the array containing all the user selections to the
+StartServers function where it will run a for loop for however
+many selections the user has made. The for loop will itterate
+through all the selections, starting each server, until none
+are left.
+
+
+
+
+-+======Additional resources======+-
+To send input to a screen session one must use a command formatted like such:
+screen -S $sessionName -X stuff "stop^M"
+
+ServerCommand {
+    screen -S "$1" -X stuff "$2^M"
+}
