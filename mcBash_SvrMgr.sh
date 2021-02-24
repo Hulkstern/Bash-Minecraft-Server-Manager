@@ -1,10 +1,8 @@
 #!/bin/bash
 
 #Constants
-#If you would like to specify more or different valid server start scripts, specify them here.
-readonly Starters=("startServer.sh" "StartServer.sh" "ServerStart.sh" "launch.sh" "ServerStartLinux.sh")
-#I'm lazy and don't feel like copy/pasting this everytime I need it
-readonly lineArt='-+=========================+-'
+readonly Starters=("startServer.sh" "StartServer.sh" "ServerStart.sh" "launch.sh" "ServerStartLinux.sh") #If you would like to specify more or different valid server start scripts, specify them here.
+readonly lineArt='-+=========================+-' #I'm lazy and don't feel like copy/pasting this everytime I need it, if you want to change the style of the seperators used when listing servers, do that here
 
 #Global Variables and Arrays (not constant)
 ServersLoc=()
@@ -15,7 +13,8 @@ starterFileReturn=""
 testFileBoolReturn=""
 
 #Functions... so many functions
-function ScanServerFiles {
+function ScanServerFiles { #Scans the working directory of the script for relevant server files and info
+    #currently this function just treats any directory as a valid server, and then stores the directory location and name in the appropriate arrays
     local locTmp=( $(find . -maxdepth 1 -type d | sort) )
     local nameTmp=( $(find . -maxdepth 1 -type d | sort) )
     local portTmp=()
@@ -66,7 +65,7 @@ function TestFile { #This function test to see if a specified file exists, then 
         testFileBoolReturn="0"
     fi
 }
-function FindStarter {
+function FindStarter { #This function determines which of the accepted starterfiles a server uses
     local i=""
     testFileBoolReturn="0"
     for i in "${!Starters[@]}"; do
@@ -76,32 +75,35 @@ function FindStarter {
         fi
     done
 }
-function StartServers {
+function StartServers { #This function starts all the selected servers passed to it
+    #This function takes a string of numbers seperated by spaces and turns it into an array. Those numbers are the index numbers of detected servers. It iterates through the array and starts the matching server for each entry.
     local tmp=($1)
     local i=""
     for i in "${!tmp[@]}"; do
         local starter=""
         FindStarter "${tmp[i]}"
         starter="$starterFileReturn"
-        cd "${ServersLoc[${tmp[i]}]}" || exit
-        screen -d -m -S "${ServersName[${tmp[i]}]}" "./$starter"
+        cd "${ServersLoc[${tmp[i]}]}" || exit #It is required to cd into a server's directory before starting so that the launch file of the server starts the server from the correct working directory
+        screen -d -m -S "${ServersName[${tmp[i]}]}" "./$starter" #This starts a new detached screen session, names it with the server name, and that it should execute the specified bash script
         cd .. || exit
+        #Before finsihing the loop the script returns to the scripts original working directory so that it is ready to start the launch next server
     done
 }
-function StopServers {
+function StopServers { #This function attempts to stop all the selected servers passed to it
+    #This Stop servers function wors similarly to the start servers
     local tmp=($1)
     local i=""
     for i in "${!tmp[@]}"; do
-        local tempName="${ServersName[${tmp[i]}]}"
-        SendServerCommand "$tempName" "save-all"
-        #echo "$tempName"
+        local tempName="${ServersName[${tmp[i]}]}" #The specified server's name is stored here temporarily as to make it easier to give as function arguments.
+        SendServerCommand "$tempName" "save-all" #This should force the specified mc server to perform a world save
+        #echo "$tempName" #This is for debug, uncomment if you are having issues with screen reporting that no matching screen session was found
         echo "Saving Server Files..."
-        sleep 5
+        sleep 5 #This delay is to allow some time for the server to finish saving, in theory this isn't needed but it's better to be safe
         echo "Stopping $tempName"
-        SendServerCommand "$tempName" "stop"
+        SendServerCommand "$tempName" "stop" #This should trigger the specified mc server to shut down
     done
 }
-function MainMenu {
+function MainMenu { #Displays the main menu and processes user selections
     while true; do
         echo "Welcome to MCBash Server Manager"
         echo "1 - Start Server(s): Choose from a list of detected servers to start"
@@ -114,7 +116,8 @@ function MainMenu {
         esac
     done
 }
-function StartServerMenu {
+function StartServerMenu { #Displays all detected servers with the option to start any number of them
+    #The logic for this goes, for all the elements within the array ServerssName display the index, name, and port then collect user input. The last step is to call the StartServers function and pass along the User's Selections
     local UserSelections=""
     local loopState=true
     while [ "$loopState" == true ]; do
@@ -122,6 +125,7 @@ function StartServerMenu {
         echo "Which servers would you like to start? [separate choices with a space]"
         echo "$lineArt"
         for i in "${!ServersName[@]}"; do
+            #This if statement exists becuase the values at index 0 for all the server information arrays is a junk entry. This will make sure that the "server" at index 0 is not listed
             if [ "$i" -gt 0 ]; then
         	    echo "${i} ${ServersName[i]}";
                 echo "On port: ${ServersPort[i]}"
@@ -134,7 +138,8 @@ function StartServerMenu {
     done
     StartServers "$UserSelections"
 }
-function StopServerMenu {
+function StopServerMenu { #Displays all servers that have an active screen session with the option to stop any number of them
+    #This function works similarly to the StartServerMenu function. However, instead of listing all detected servers only the ones that have an active screen session are listed, and the User's Selections are passed to the StopServers function
     CheckOnlineServers
     local UserSelections=""
     local loopState=true
@@ -154,7 +159,7 @@ function StopServerMenu {
     done
     StopServers "$UserSelections"
 }
-function ValidateUserInput {
+function ValidateUserInput { #Verifies that all the selections made by the user are valid servers.
     #Currently this function is not completed nor implemented, you can find where it would be called in the (Stop/Start)ServerMenu functions where it is commented out.
     local tmp="$(echo "$1" | sed 's/ //g' | tr -d '0-9')"
     if [ $tmp != "" ]; then
