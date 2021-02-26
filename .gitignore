@@ -1,0 +1,14 @@
+#Ignore Everything
+*
+*/*
+
+#Except for these files/folders
+!.gitignore
+!misc/
+!CODE_OF_CONDUCT.md
+!LICENSE
+!README.md
+!mcBash_SvrMgr.sh
+!slog.sh
+!misc/Testing.sh
+!misc/New-Improved_ServerStart-SH.txt
