@@ -40,3 +40,19 @@ screen -S $sessionName -X stuff "stop^M"
 ServerCommand {
     screen -S "$1" -X stuff "$2^M"
 }
+
+
+(This is where I keep) my gitignore template
+
+#Ignore Everything
+*
+*/*
+
+#Except for these files
+!CODE_OF_CONDUCT.md
+!LICENSE
+!README.md
+!mcBash_SvrMgr.sh
+!slog.sh
+!Testing.sh
+!New-Improved_ServerStart-SH.txt
