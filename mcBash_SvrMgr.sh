@@ -1,5 +1,8 @@
 #!/bin/bash
 
+#Importing external scripts
+source slog.sh
+
 #Constants
 readonly Starters=("startServer.sh" "StartServer.sh" "ServerStart.sh" "launch.sh" "ServerStartLinux.sh") #If you would like to specify more or different valid server start scripts, specify them here.
 readonly lineArt='-+=========================+-' #I'm lazy and don't feel like copy/pasting this everytime I need it, if you want to change the style of the seperators used when listing servers, do that here
@@ -108,7 +111,7 @@ function MainMenu { #Displays the main menu and processes user selections
         echo "Welcome to MCBash Server Manager"
         echo "1 - Start Server(s): Choose from a list of detected servers to start"
         echo "2 - Stop Server(s):  Stop Already Running servers"
-        read -p "Please make your selection: " pl
+        read -r -p "Please make your selection: " pl
         case $pl in
             [1]* ) StartServerMenu; break;;
             [2]*  ) StopServerMenu; break;;
@@ -167,7 +170,17 @@ function ValidateUserInput { #Verifies that all the selections made by the user 
     fi
     #Validation comes in two steps. First it is checked to make sure that the string contains only numbers and spaces. If that passes, a second check is performed to make sure that all selections are in range. As in, no selection is of greater value than the the highest index number server. If both checks pass then the function returns true, if either check fails, then the function returns false.
 }
+function LogToFile { #Will set all logs to log to file if run
+    local dirScan=""
+    dirScan="$(find . -not -path '*/\.*' -type d -name "$1" | cut -c3-)"
+    if [ "$dirScan" != "$1" ]; then
+        echo "logs directory doesn't exist, creating..."
+        mkdir ./"$1"
+    fi
+    LOG_PATH="./$1/$2"
+}
 
+LogToFile "logs" "$(date +"%Y-%m-%d %T") - log"
 ScanServerFiles
 MainMenu
 
