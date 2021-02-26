@@ -5,6 +5,9 @@ source slog.sh
 
 #Constants
 readonly Starters=("startServer.sh" "StartServer.sh" "ServerStart.sh" "launch.sh" "ServerStartLinux.sh") #If you would like to specify more or different valid server start scripts, specify them here.
+readonly startingDir=$PWD #This stores the working directory that the script starts from for future reference
+readonly LOG_LEVEL_STDOUT=DEBUG
+readonly LOG_LEVEL_LOG=DEBUG
 readonly lineArt='-+=========================+-' #I'm lazy and don't feel like copy/pasting this everytime I need it, if you want to change the style of the seperators used when listing servers, do that here
 
 #Global Variables and Arrays (not constant)
@@ -26,6 +29,11 @@ function ScanServerFiles { #Scans the working directory of the script for releva
     ServersLoc=( ${locTmp[@]} )
     ServersName=( $(ListArray "${nameTmp[@]}" | cut -c3-)  )
     ServersPort=( ${portTmp[@]} )
+
+    #This is for debug, to see what is being detected
+    log_debug "Directories found: $(ListArray "${ServersLoc[@]}")"
+    log_debug "Names Generated: $(ListArray "${ServersName[@]}")"
+    log_debug "Ports detected: $(ListArray "${ServersPort[@]}")"
 }
 function FindServerPorts { #(Not Yet Implemented)
     #This functionality has not yet been added, eventually this will read the server.properties file of each server detected and store it in the "ServersPort" array
@@ -46,10 +54,11 @@ function CheckOnlineServers { #Checks to see whether the screen session for each
         fi
         #ListArray "${OnlineServers[@]}" #This is for debug, uncomment if you are not seeing any servers being displayed when servers are running (within screen sessions). It prints the raw output of "screen -list"
     done
+    log_debug "Detected Servers: $(ListArray "${OnlineServers[@]}")"
 }
 function SendServerCommand { #Send a string of input to a specified server
     #This is how commands are sent to the server, though it can be used to send any string to the server console. Any string passed to this function is sent to the specified server's screen session with a return character.
-    screen -S "$1" -X stuff "$2^M"
+    screen -S "$1" -X stuff "$2^M" && log_success "$2 command sent to $1 server" || log_error "$2 command did not get sent to $1 server"
 
     #How to use:
     #ServerCommand "{ScreenName}" "{Command}"
@@ -63,9 +72,11 @@ function TestFile { #This function test to see if a specified file exists, then 
     if test -f "$1"; then
         #echo "$1 exists." #This is for debug, uncomment if you are experiencing issues with the starter/launch file for a server(s) being detected
         testFileBoolReturn="1"
+        log_debug "$1 did exist"
     else
         #echo "$1 does not exist" #This is for debug, uncomment if you are experiencing issues with the starter/launch file for a server(s) being detected 
         testFileBoolReturn="0"
+        log_debug "$1 didnt exist"
     fi
 }
 function FindStarter { #This function determines which of the accepted starterfiles a server uses
@@ -86,9 +97,9 @@ function StartServers { #This function starts all the selected servers passed to
         local starter=""
         FindStarter "${tmp[i]}"
         starter="$starterFileReturn"
-        cd "${ServersLoc[${tmp[i]}]}" || exit #It is required to cd into a server's directory before starting so that the launch file of the server starts the server from the correct working directory
-        screen -d -m -S "${ServersName[${tmp[i]}]}" "./$starter" #This starts a new detached screen session, names it with the server name, and that it should execute the specified bash script
-        cd .. || exit
+        cd "${ServersLoc[${tmp[i]}]}" || log_error "cd into '${ServersLoc[${tmp[i]}]}' failed" && exit #It is required to cd into a server's directory before starting so that the launch file of the server starts the server from the correct working directory
+        screen -d -m -S "${ServersName[${tmp[i]}]}" "./$starter" && log_success "${ServersName[${tmp[i]}]} server's screen session started successfully" || log_error "${ServersName[${tmp[i]}]} server's screen session did not start" #This starts a new detached screen session, names it with the server name, and that it should execute the specified bash script
+        cd .. || log_error "cd '..' failed" && exit
         #Before finsihing the loop the script returns to the scripts original working directory so that it is ready to start the launch next server
     done
 }
@@ -111,7 +122,7 @@ function MainMenu { #Displays the main menu and processes user selections
         echo "Welcome to MCBash Server Manager"
         echo "1 - Start Server(s): Choose from a list of detected servers to start"
         echo "2 - Stop Server(s):  Stop Already Running servers"
-        read -r -p "Please make your selection: " pl
+        read -r -p "Please make your selection: " pl && log_debug "Selection: $pl"
         case $pl in
             [1]* ) StartServerMenu; break;;
             [2]*  ) StopServerMenu; break;;
@@ -139,6 +150,7 @@ function StartServerMenu { #Displays all detected servers with the option to sta
         #ValidateUserInput "$UserSelections"
         loopState=false
     done
+    log_debug "User Selections: $UserSelections"
     StartServers "$UserSelections"
 }
 function StopServerMenu { #Displays all servers that have an active screen session with the option to stop any number of them
@@ -160,6 +172,7 @@ function StopServerMenu { #Displays all servers that have an active screen sessi
         #ValidateUserInput "$UserSelections"
         loopState=false
     done
+    log_debug "User Selections: $UserSelections"
     StopServers "$UserSelections"
 }
 function ValidateUserInput { #Verifies that all the selections made by the user are valid servers.
@@ -174,15 +187,19 @@ function LogToFile { #Will set all logs to log to file if run
     local dirScan=""
     dirScan="$(find . -not -path '*/\.*' -type d -name "$1" | cut -c3-)"
     if [ "$dirScan" != "$1" ]; then
-        echo "logs directory doesn't exist, creating..."
+        log "'./$1' directory doesn't exist, creating..."
+        #echo "logs directory doesn't exist, creating..."
         mkdir ./"$1"
     fi
     LOG_PATH="./$1/$2"
+    log "Logging to file at ./$1/$2"
 }
 
-LogToFile "logs" "$(date +"%Y-%m-%d %T") - log"
+LogToFile "logs" "$(date +"%Y-%m-%d_%T").log" #This is to enable logging to a file, uncomment if you would like log output to be written to a log file within the logs folder.
+echo ""
 ScanServerFiles
 MainMenu
+
 
 #cd "${ServersLoc[2]}" || exit #This works!
 #TestFile "${ServersLoc[3]}/server.pproperties"
