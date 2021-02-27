@@ -5,6 +5,7 @@ source slog.sh
 
 #Constants
 readonly Starters=("startServer.sh" "StartServer.sh" "ServerStart.sh" "launch.sh" "ServerStartLinux.sh") #If you would like to specify more or different valid server start scripts, specify them here.
+readonly serverDir=""
 readonly startingDir=$PWD #This stores the working directory that the script starts from for future reference
 readonly LOG_LEVEL_STDOUT=DEBUG
 readonly LOG_LEVEL_LOG=DEBUG
@@ -21,13 +22,12 @@ testFileBoolReturn=""
 #Functions... so many functions
 function ScanServerFiles { #Scans the working directory of the script for relevant server files and info
     #currently this function just treats any directory as a valid server, and then stores the directory location and name in the appropriate arrays
-    local locTmp=( $(find . -maxdepth 1 -type d | sort) )
-    local nameTmp=( $(find . -maxdepth 1 -type d | sort) )
+    local scanResult=( $(find . -maxdepth 1 -type d | sort) )
     local portTmp=()
     nameTmp[0]="--GoFuckYourself"
 
-    ServersLoc=( ${locTmp[@]} )
-    ServersName=( $(ListArray "${nameTmp[@]}" | cut -c3-)  )
+    ServersLoc=( ${scanResult[@]} )
+    ServersName=( $(ListArray "${scanResult[@]}" | cut -c3-)  )
     ServersPort=( ${portTmp[@]} )
 
     #This is for debug, to see what is being detected
@@ -184,10 +184,11 @@ function ValidateUserInput { #Verifies that all the selections made by the user 
     #Validation comes in two steps. First it is checked to make sure that the string contains only numbers and spaces. If that passes, a second check is performed to make sure that all selections are in range. As in, no selection is of greater value than the the highest index number server. If both checks pass then the function returns true, if either check fails, then the function returns false.
 }
 function LogToFile { #Will set all logs to log to file if run
+    #This takes two arguments, the first being the folder where you would like to store logs, the second being how you would like logs to named. If you choose a static name then logs will just append to the same file every time the script is run
     local dirScan=""
     dirScan="$(find . -not -path '*/\.*' -type d -name "$1" | cut -c3-)"
     if [ "$dirScan" != "$1" ]; then
-        log "'./$1' directory doesn't exist, creating..."
+        log_warning "'./$1' directory doesn't exist, creating..."
         #echo "logs directory doesn't exist, creating..."
         mkdir ./"$1"
     fi
