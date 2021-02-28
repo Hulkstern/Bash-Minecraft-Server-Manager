@@ -24,7 +24,7 @@ function ScanServerFiles { #Scans the working directory of the script for releva
     #currently this function just treats any directory as a valid server, and then stores the directory location and name in the appropriate arrays
     local scanResult=( $(find . -maxdepth 1 -type d | sort) )
     local portTmp=()
-    nameTmp[0]="--GoFuckYourself"
+    nameTmp[0]="--JunkEntry"
 
     ServersLoc=( ${scanResult[@]} )
     ServersName=( $(ListArray "${scanResult[@]}" | cut -c3-)  )
