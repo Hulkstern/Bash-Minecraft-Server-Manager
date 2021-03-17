@@ -195,7 +195,20 @@ function LogToFile { #Will set all logs to log to file if run
     LOG_PATH="./$1/$2"
     log "Logging to file at ./$1/$2"
 }
+function WSL-compat { #Due to some funkiness with how WSL inits, this function makes sure that the directories needed for screen to function exist and that they are created if not
+    if [ ! -d "/run/screen" ]; then
+        log_warning "'/run/screen' Does not exist, attempting to create"
+        echo "Screen requires the '/run/screen' directory to exist in order to work properly,"
+        echo "Please enter your root password to allow the creation of that directory"
+        sudo mkdir /run/screen || log_error "Failed to create '/run/screen' directory, exiting..." && exit
+        sudo chmod 777 /run/screen || log_error "Failed to set permssions of '/run/screen' directory, exiting..." && exit
+        log_
+    else
+        log_debug "/run/screen exists, did not attempt to create or set permissions for '/run/screen'"
+    fi
+}
 
+WSL-compat
 LogToFile "logs" "$(date +"%Y-%m-%d_%T").log" #This is to enable logging to a file, uncomment if you would like log output to be written to a log file within the logs folder.
 echo ""
 ScanServerFiles
