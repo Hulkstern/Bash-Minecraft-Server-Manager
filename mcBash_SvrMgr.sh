@@ -23,11 +23,12 @@ testFileBoolReturn=""
 function ScanServerFiles { #Scans the working directory of the script for relevant server files and info
     #currently this function just treats any directory as a valid server, and then stores the directory location and name in the appropriate arrays
     local scanResult=( $(find . -maxdepth 1 -type d | sort) )
+    local nameTmp=( ${scanResult[@]} )
     local portTmp=()
     nameTmp[0]="--JunkEntry"
 
     ServersLoc=( ${scanResult[@]} )
-    ServersName=( $(ListArray "${scanResult[@]}" | cut -c3-)  )
+    ServersName=( $(ListArray "${nameTmp[@]}" | cut -c3-) )
     ServersPort=( ${portTmp[@]} )
 
     #This is for debug, to see what is being detected
@@ -88,6 +89,7 @@ function FindStarter { #This function determines which of the accepted starterfi
             starterFileReturn=${Starters[$i]}
         fi
     done
+    log_debug "FindStarter Returned: $starterFileReturn"
 }
 function StartServers { #This function starts all the selected servers passed to it
     #This function takes a string of numbers seperated by spaces and turns it into an array. Those numbers are the index numbers of detected servers. It iterates through the array and starts the matching server for each entry.
@@ -97,8 +99,11 @@ function StartServers { #This function starts all the selected servers passed to
         local starter=""
         FindStarter "${tmp[i]}"
         starter="$starterFileReturn"
+        log_debug "Finished Finding Starter, about to CD into a new directory '${ServersLoc[${tmp[i]}]}'"
         cd "${ServersLoc[${tmp[i]}]}" || log_error "cd into '${ServersLoc[${tmp[i]}]}' failed" && exit #It is required to cd into a server's directory before starting so that the launch file of the server starts the server from the correct working directory
+        log_debug "Moved into new diretory, attempting to start screen session with ' screen -d -m -S "${ServersName[${tmp[i]}]}" "./$starter" '"
         screen -d -m -S "${ServersName[${tmp[i]}]}" "./$starter" && log_success "${ServersName[${tmp[i]}]} server's screen session started successfully" || log_error "${ServersName[${tmp[i]}]} server's screen session did not start" #This starts a new detached screen session, names it with the server name, and that it should execute the specified bash script
+        log_debug "Finished Screen Command, about to CD up a directory back into main servers directory"
         cd .. || log_error "cd '..' failed" && exit
         #Before finsihing the loop the script returns to the scripts original working directory so that it is ready to start the launch next server
     done
@@ -185,9 +190,7 @@ function ValidateUserInput { #Verifies that all the selections made by the user 
 }
 function LogToFile { #Will set all logs to log to file if run
     #This takes two arguments, the first being the folder where you would like to store logs, the second being how you would like logs to named. If you choose a static name then logs will just append to the same file every time the script is run
-    local dirScan=""
-    dirScan="$(find . -not -path '*/\.*' -type d -name "$1" | cut -c3-)"
-    if [ "$dirScan" != "$1" ]; then
+    if [ ! -d "./$1" ]; then
         log_warning "'./$1' directory doesn't exist, creating..."
         #echo "logs directory doesn't exist, creating..."
         mkdir ./"$1"
@@ -200,16 +203,16 @@ function WSL-compat { #Due to some funkiness with how WSL inits, this function m
         log_warning "'/run/screen' Does not exist, attempting to create"
         echo "Screen requires the '/run/screen' directory to exist in order to work properly,"
         echo "Please enter your root password to allow the creation of that directory"
+        #I don't know exactly why screen needs this directory with those specific permissions to function, but it refuses to work without it so we have to make sure it's there
         sudo mkdir /run/screen || log_error "Failed to create '/run/screen' directory, exiting..." && exit
         sudo chmod 777 /run/screen || log_error "Failed to set permssions of '/run/screen' directory, exiting..." && exit
-        log_
     else
         log_debug "/run/screen exists, did not attempt to create or set permissions for '/run/screen'"
     fi
 }
 
-WSL-compat
 LogToFile "logs" "$(date +"%Y-%m-%d_%T").log" #This is to enable logging to a file, uncomment if you would like log output to be written to a log file within the logs folder.
+WSL-compat
 echo ""
 ScanServerFiles
 MainMenu
